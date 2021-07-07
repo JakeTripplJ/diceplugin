@@ -2,6 +2,7 @@ name: DicePlugin
 version: 0.2
 author: Highfire1
 main: highfire1.diceplugin.diceplugin.Diceplugin
+website: https://github.com/Highfire1/diceplugin
 api-version: 1.17
 commands:
   roll:
