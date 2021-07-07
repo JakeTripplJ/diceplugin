@@ -4,104 +4,162 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class diceparser {
-    public static final String[] parsedice(String[] input, Random random_generator) {
+    public static String[] parsedice(String[] input, Random random_generator) {
 
 
-
-        if (input.length == 0) {
-            return new String[]{"At least one parameter required!"};
+        // default to 1d20 if no input provided
+        if (input.length == 0 || input[0].length() == 0) {
+            input[0] = "1d20";
         }
 
-        String roll = input[0];
-
+        // build output string
         String str1 = (input.length > 1) ?
-                String.join(",", input).substring(roll.length()) + ":" :
+                String.join(" ", input).substring(1).substring(input[0].length()) + " : " :
                 "Rolling: ";
 
-
-        // separate parameters to make dice easier to parse
-        // generates string list in the form of {"1", "d", "20", "+", "35"}
-        ArrayList<String> dicereader = new ArrayList<String>();
+        // Preprocess input
+        // generates string list in the form of {"1d20", "+", "35"}
+        ArrayList<String> dicereader = new ArrayList<>();
 
         String tempholder = "";
-        for (char s : roll.toCharArray()) {
-            if (s == 'd' || s == '+') {
-                //TODO check is integer here
-                dicereader.add(tempholder);
-                tempholder = "";
+        for (char s : input[0].toCharArray()) {
+            if (s == '-' || s == '+' || s == '(' || s == ')' || s == '*' || s == '/' || s == '^') {
+                if (tempholder.length() > 0) {
+                    dicereader.add(tempholder);
+                    tempholder = "";
+                }
                 dicereader.add(String.valueOf(s));
-            } else {
+            } else if (s != ' ') {
                 tempholder += s;
             }
         }
         dicereader.add(tempholder);
 
-        // THIS CODE IS HORRIBLE PAIN
-        int counter = 0;
-        for (String ohno : dicereader) {
-            if (ohno.equals("d")) {
-                counter++;
-            }
-        }
-        if (counter > 1) {
-            return new String[]{"only one dice allowed PLEASE HOLD WHILE I REWRITE THIS CODE"};
-        }
+        // Convert dice into numbers
+        //ArrayList<Integer> dicerolls = new ArrayList<>();
 
+        for (int i=0; i<dicereader.size(); i++) {
+            String param = dicereader.get(i);
 
-        // QOL things
-        // allow input like "d20" -> "1d20"
-        // TODO REWORK
-        if (dicereader.get(0).equals("d")) {
-            dicereader.add(0, "1");
-        }
+            if (param.contains("d")) {
 
-        // parse input
-        ArrayList<Integer> rolls = new ArrayList<Integer>();
-        Integer total = 0;
-
-
-        for(int i = 0; i < dicereader.size(); i++ ) {
-            String cur_param = dicereader.get(i);
-
-            // get last and next element to roll dice
-            if (cur_param.equals("d")) {
-                if (i <= 0 || i >= dicereader.size()) {
-                    return new String[]{"Malformed input boooo"};
+                if (param.charAt(0) == 'd') {
+                    param = "1".concat(param);
                 }
-                int dice_amt = Integer.parseInt(dicereader.get(i-1));
-                int dice_val = Integer.parseInt(dicereader.get(i+1));
-                str1 += (dicereader.get(i-1) + "d" + dicereader.get(i+1) + " (");
 
-                // actually roll dice
-                for(int j=0; j<dice_amt; j++) {
-                    int single_roll = random_generator.nextInt(dice_val) + 1;
-                    str1 += (single_roll + ", ");
-                    total += single_roll;
+                String[] dice_parts = param.split("d");
+
+                str1 = str1.concat(param + " (");
+
+                int dice_num = Integer.parseInt(dice_parts[0]);
+                int dice_val = Integer.parseInt(dice_parts[1]);
+
+                int total = 0;
+
+                for (int j = 0; j < dice_num; j++) {
+                    int roll = random_generator.nextInt(dice_val) + 1;
+                    str1 = str1.concat(roll + ", ");
+                    total += roll;
                 }
-                // prettyness
                 str1 = str1.substring(0, str1.length()-2) + ")";
-            }
+                dicereader.set(i, Integer.toString(total));
 
-            // ADDITION!
-            if (cur_param.equals("+")) {
-                if (i >= dicereader.size() - 1) {
-                    return new String[]{"Malformed input boooo"};
-                }
-                str1 += " + " + dicereader.get(i+1);
-                total += Integer.parseInt(dicereader.get(i+1));
+                // Fancy spacing for parentheses and operators
+            } else if (param.contains("(") || param.contains(")")) {
+                str1 = str1.concat(param);
 
 
-            }
-            // hooray for edge cases
-            if (dicereader.size() == 1) {
-                str1 += dicereader.get(i+1);
-                total += Integer.parseInt(dicereader.get(i));
+            } else {
+                str1 = str1.concat(" " + param + " ");
             }
         }
 
-        String str2 = "Total: " + Integer.toString(total);
+        double total_ = math_eval(String.join("", dicereader));
+        String str2 = "Total: " + (int)total_;
 
-        String[] out = {str1, str2};
-        return out;
+        return new String[] {str1, str2};
+    }
+
+
+    // Courtesy of Boann from Stackoverflow @
+    // https://stackoverflow.com/questions/3422673/how-to-evaluate-a-math-expression-given-in-string-form
+    public static double math_eval(final String str) {
+        return new Object() {
+            int pos = -1, ch;
+
+            void nextChar() {
+                ch = (++pos < str.length()) ? str.charAt(pos) : -1;
+            }
+
+            boolean eat(int charToEat) {
+                while (ch == ' ') nextChar();
+                if (ch == charToEat) {
+                    nextChar();
+                    return true;
+                }
+                return false;
+            }
+
+            double parse() {
+                nextChar();
+                double x = parseExpression();
+                if (pos < str.length()) throw new RuntimeException("Unexpected: " + (char)ch);
+                return x;
+            }
+
+            // Grammar:
+            // expression = term | expression `+` term | expression `-` term
+            // term = factor | term `*` factor | term `/` factor
+            // factor = `+` factor | `-` factor | `(` expression `)`
+            //        | number | functionName factor | factor `^` factor
+
+            double parseExpression() {
+                double x = parseTerm();
+                for (;;) {
+                    if      (eat('+')) x += parseTerm(); // addition
+                    else if (eat('-')) x -= parseTerm(); // subtraction
+                    else return x;
+                }
+            }
+
+            double parseTerm() {
+                double x = parseFactor();
+                for (;;) {
+                    if      (eat('*')) x *= parseFactor(); // multiplication
+                    else if (eat('/')) x /= parseFactor(); // division
+                    else return x;
+                }
+            }
+
+            double parseFactor() {
+                if (eat('+')) return parseFactor(); // unary plus
+                if (eat('-')) return -parseFactor(); // unary minus
+
+                double x;
+                int startPos = this.pos;
+                if (eat('(')) { // parentheses
+                    x = parseExpression();
+                    eat(')');
+                } else if ((ch >= '0' && ch <= '9') || ch == '.') { // numbers
+                    while ((ch >= '0' && ch <= '9') || ch == '.') nextChar();
+                    x = Double.parseDouble(str.substring(startPos, this.pos));
+                } else if (ch >= 'a' && ch <= 'z') { // functions
+                    while (ch >= 'a' && ch <= 'z') nextChar();
+                    String func = str.substring(startPos, this.pos);
+                    x = parseFactor();
+                    if (func.equals("sqrt")) x = Math.sqrt(x);
+                    else if (func.equals("sin")) x = Math.sin(Math.toRadians(x));
+                    else if (func.equals("cos")) x = Math.cos(Math.toRadians(x));
+                    else if (func.equals("tan")) x = Math.tan(Math.toRadians(x));
+                    else throw new RuntimeException("Unknown function: " + func);
+                } else {
+                    throw new RuntimeException("Unexpected: " + (char)ch);
+                }
+
+                if (eat('^')) x = Math.pow(x, parseFactor()); // exponentiation
+
+                return x;
+            }
+        }.parse();
     }
 }
