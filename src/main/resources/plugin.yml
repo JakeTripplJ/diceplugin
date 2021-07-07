@@ -6,6 +6,6 @@ website: https://github.com/Highfire1/diceplugin
 api-version: 1.17
 commands:
   roll:
-    description: Rolls a dice in the form 1d20 where 1 represents the amount of dice to roll and 20 represents the dice value
+    description: Rolls a dice
     usage: /roll xdx
     aliases: [r]
