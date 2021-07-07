@@ -65,7 +65,7 @@ public class diceparser {
 
             // get last and next element to roll dice
             if (cur_param.equals("d")) {
-                if (i == 0 || i >= dicereader.size()) {
+                if (i <= 0 || i >= dicereader.size()) {
                     return new String[]{"Malformed input boooo"};
                 }
                 int dice_amt = Integer.parseInt(dicereader.get(i-1));
@@ -84,7 +84,7 @@ public class diceparser {
 
             // ADDITION!
             if (cur_param.equals("+")) {
-                if (i == dicereader.size()) {
+                if (i >= dicereader.size() - 1) {
                     return new String[]{"Malformed input boooo"};
                 }
                 str1 += " + " + dicereader.get(i+1);
