@@ -37,7 +37,6 @@
                         <phase>package</phase>
 
                         <configuration>
-                            <outputDirectory>C:\Users\Ander\Desktop\minecraftdnd\server-paper\plugins</outputDirectory>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                         </configuration>
 

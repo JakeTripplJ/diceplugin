@@ -25,17 +25,13 @@ public final class Diceplugin extends JavaPlugin {
                              String[] args) {
         if (command.getName().equalsIgnoreCase("roll")) {
 
-            if (args.length > 1) {
-                sender.sendMessage("Too many parameters!");
-            } else if (args.length == 0) {
-                sender.sendMessage("At least 1 parameter required!");
-            } else {
-                Random random_generator = new Random();
-                String[] out_msg = diceparser.parsedice(args[0], random_generator);
-                for (String line : out_msg){
-                    sender.sendMessage(line);
-                }
+
+            Random random_generator = new Random();
+            String[] out_msg = diceparser.parsedice(args, random_generator);
+            for (String line : out_msg){
+                sender.sendMessage(line);
             }
+
             return true;
         }
         return false;
