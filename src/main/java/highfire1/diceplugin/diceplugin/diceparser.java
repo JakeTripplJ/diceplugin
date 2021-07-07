@@ -1,5 +1,8 @@
 package highfire1.diceplugin.diceplugin;
 
+import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Color;
+
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -9,7 +12,7 @@ public class diceparser {
 
         // default to 1d20 if no input provided
         if (input.length == 0 || input[0].length() == 0) {
-            input[0] = "1d20";
+            input = new String[] {"1d20"};
         }
 
         // build output string
@@ -48,19 +51,24 @@ public class diceparser {
                 }
 
                 String[] dice_parts = param.split("d");
+                int total = 0;
 
                 str1 = str1.concat(param + " (");
 
-                int dice_num = Integer.parseInt(dice_parts[0]);
-                int dice_val = Integer.parseInt(dice_parts[1]);
+                try {
+                    int dice_num = Integer.parseInt(dice_parts[0]);
+                    int dice_val = Integer.parseInt(dice_parts[1]);
 
-                int total = 0;
+                    for (int j = 0; j < dice_num; j++) {
+                        int roll = random_generator.nextInt(dice_val) + 1;
+                        str1 = str1.concat(roll + ", ");
+                        total += roll;
+                    }
 
-                for (int j = 0; j < dice_num; j++) {
-                    int roll = random_generator.nextInt(dice_val) + 1;
-                    str1 = str1.concat(roll + ", ");
-                    total += roll;
+                } catch (Exception e) {
+                    return new String[]{ChatColor.of(String.valueOf(Color.RED)) + "Error: Malformed input"};
                 }
+
                 str1 = str1.substring(0, str1.length()-2) + ")";
                 dicereader.set(i, Integer.toString(total));
 

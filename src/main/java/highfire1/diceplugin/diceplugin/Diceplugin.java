@@ -1,5 +1,6 @@
 package highfire1.diceplugin.diceplugin;
 
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -28,10 +29,11 @@ public final class Diceplugin extends JavaPlugin {
 
             Random random_generator = new Random();
             String[] out_msg = diceparser.parsedice(args, random_generator);
+
             for (String line : out_msg){
                 sender.sendMessage(line);
             }
-
+            sender.sendMessage(ChatColor.of("Diamond"));
             return true;
         }
         return false;
