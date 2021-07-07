@@ -1,0 +1,9 @@
+name: DicePlugin
+version: 0.2
+author: Highfire1
+main: highfire1.diceplugin.diceplugin.Diceplugin
+api-version: 1.17
+commands:
+  roll:
+    description: Rolls a dice in the form 1d20 where 1 represents the amount of dice to roll and 20 represents the dice value
+    usage: /roll xdx
