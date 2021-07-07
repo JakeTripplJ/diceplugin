@@ -33,7 +33,6 @@ public final class Diceplugin extends JavaPlugin {
             for (String line : out_msg){
                 sender.sendMessage(line);
             }
-            sender.sendMessage(ChatColor.of("Diamond"));
             return true;
         }
         return false;
