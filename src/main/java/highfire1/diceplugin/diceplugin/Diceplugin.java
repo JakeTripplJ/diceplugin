@@ -1,6 +1,7 @@
 package highfire1.diceplugin.diceplugin;
 
 import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -24,14 +25,14 @@ public final class Diceplugin extends JavaPlugin {
                              Command command,
                              String label,
                              String[] args) {
+
         if (command.getName().equalsIgnoreCase("roll")) {
-
-
-            Random random_generator = new Random();
-            String[] out_msg = diceparser.parsedice(args, random_generator);
+            Random random_generator = new Random(); // how do i put this in onEnable pain
+            String[] out_msg = diceparser.parsedice(args, random_generator); // parse input
 
             for (String line : out_msg){
                 sender.sendMessage(line);
+                //Bukkit.broadcast();
             }
             return true;
         }

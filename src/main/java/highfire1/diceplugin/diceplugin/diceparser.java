@@ -16,74 +16,94 @@ public class diceparser {
         }
 
         // build output string
+        // use custom text if exists, else default to generic message
         String str1 = (input.length > 1) ?
                 String.join(" ", input).substring(1).substring(input[0].length()) + " : " :
                 "Rolling: ";
 
         // Preprocess input
         // generates string list in the form of {"1d20", "+", "35"}
+        // iterates through every char in input, generates a split at every operator
+        // operators are +-*/^()
         ArrayList<String> dicereader = new ArrayList<>();
+        StringBuilder temp_holder = new StringBuilder();
 
-        String tempholder = "";
         for (char s : input[0].toCharArray()) {
-            if (s == '-' || s == '+' || s == '(' || s == ')' || s == '*' || s == '/' || s == '^') {
-                if (tempholder.length() > 0) {
-                    dicereader.add(tempholder);
-                    tempholder = "";
+
+            if ("+-*/^()".contains(Character.toString(s))) {
+                if (temp_holder.length() > 0) {
+                    dicereader.add(temp_holder.toString());
+                    temp_holder = new StringBuilder(); // equivalent to clearing StringBuilder as setLength is bad
                 }
                 dicereader.add(String.valueOf(s));
+
             } else if (s != ' ') {
-                tempholder += s;
+                temp_holder.append(s);
             }
         }
-        dicereader.add(tempholder);
+        dicereader.add(temp_holder.toString());
 
-        // Convert dice into numbers
-        //ArrayList<Integer> dicerolls = new ArrayList<>();
-
+        // Convert dice into numbers by iterating through dicereader
         for (int i=0; i<dicereader.size(); i++) {
-            String param = dicereader.get(i);
+            String param = dicereader.get(i); // will be either a roll/num or operator e.g. 1d20, +, -, 15, etc.
 
+            // if parameter looks like dice then try to roll it
             if (param.contains("d")) {
 
+                // make d20 -> 1d20
                 if (param.charAt(0) == 'd') {
                     param = "1".concat(param);
                 }
 
-                String[] dice_parts = param.split("d");
-                int total = 0;
+                String[] dice_parts = param.split("d", 2);
 
-                str1 = str1.concat(param + " (");
-
+                if (dice_parts[0].equals("") || dice_parts[1].equals("")) {
+                    return new String[] {"Malformed input."};
+                }
+                // Catch bad input
                 try {
-                    int dice_num = Integer.parseInt(dice_parts[0]);
-                    int dice_val = Integer.parseInt(dice_parts[1]);
-
-                    for (int j = 0; j < dice_num; j++) {
-                        int roll = random_generator.nextInt(dice_val) + 1;
-                        str1 = str1.concat(roll + ", ");
-                        total += roll;
-                    }
+                    Integer.parseInt(dice_parts[0]);
+                    Integer.parseInt(dice_parts[1]);
 
                 } catch (Exception e) {
-                    return new String[]{ChatColor.of(String.valueOf(Color.RED)) + "Error: Malformed input"};
+                    return new String[]{"Malformed input."};
                 }
 
+                // Finally roll dice now that input is clean
+                str1 = str1.concat(param + " (");
+                int dice_num = Integer.parseInt(dice_parts[0]);
+                int dice_val = Integer.parseInt(dice_parts[1]);
+
+                int total = 0;
+                for (int j = 0; j < dice_num; j++) {
+                    int roll = random_generator.nextInt(dice_val) + 1;
+                    str1 = str1.concat(roll + ", ");
+                    total += roll;
+                }
+
+                // remove extra comma from last roll
                 str1 = str1.substring(0, str1.length()-2) + ")";
+                // replace "1d20" with dice output to use in evaluation
                 dicereader.set(i, Integer.toString(total));
 
-                // Fancy spacing for parentheses and operators
+            // if parameter not like dice then just add it to str1
             } else if (param.contains("(") || param.contains(")")) {
                 str1 = str1.concat(param);
 
-
             } else {
-                str1 = str1.concat(" " + param + " ");
+                str1 = str1.concat(" " + param);
             }
         }
 
-        double total_ = math_eval(String.join("", dicereader));
-        String str2 = "Total: " + (int)total_;
+        // evaluate the expression to output a total, taking into account parentheses/math
+        int total_ = 0;
+        try {
+            total_ = math_eval(String.join("", dicereader));
+        } catch (Exception e) {
+            return new String[]{"Math failed... :("};
+        }
+
+        String str2 = "Total: " + total_;
 
         return new String[] {str1, str2};
     }
@@ -91,8 +111,8 @@ public class diceparser {
 
     // Courtesy of Boann from Stackoverflow @
     // https://stackoverflow.com/questions/3422673/how-to-evaluate-a-math-expression-given-in-string-form
-    public static double math_eval(final String str) {
-        return new Object() {
+    public static int math_eval(final String str) {
+        return (int) new Object() {
             int pos = -1, ch;
 
             void nextChar() {
