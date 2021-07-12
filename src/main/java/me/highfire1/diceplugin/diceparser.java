@@ -1,34 +1,81 @@
-package highfire1.diceplugin.diceplugin;
+package me.highfire1.diceplugin;
 
-import net.md_5.bungee.api.ChatColor;
-import org.bukkit.Color;
+import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
 
 import java.util.ArrayList;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
+import static me.highfire1.diceplugin.Diceplugin.default_mode;
+import static me.highfire1.diceplugin.Diceplugin.default_mode_types;
 
 public class diceparser {
-    public static String[] parsedice(String[] input, Random random_generator) {
+    public static void parsedice(CommandSender sender, String[] args) {
 
 
-        // default to 1d20 if no input provided
-        if (input.length == 0 || input[0].length() == 0) {
-            input = new String[] {"1d20"};
+        // check if a mode was selected
+        String mode = default_mode;
+        boolean param_exists = false;
+        boolean temp = false;
+        String str1 = "";
+
+        int startint;
+        if (args.length > 0 && args[0].contains("d")) {
+            startint = 1;
+        } else {
+            startint = 0;
+        }
+
+        // iterate through args while also building str1
+        for (int i = startint; i<args.length; i++) {
+
+            // iterate through all default modes
+            for (String default_mode : default_mode_types) {
+                if (args[i].equals(("-" + default_mode))) {
+                    mode = default_mode;
+                    temp = true;
+                    param_exists = true;
+                    break;
+                }
+            }
+            // build to str1 if not parameter
+            if (!temp) {
+                temp = false;
+                str1 += args[i] + " ";
+            }
+        }
+
+        if (str1.length() > 0) {
+            str1 = str1.substring(0, str1.length() - 1) + ":";
+        } else {
+            str1 = "Rolling: ";
+        }
+
+        // default to 1d20 if "no" args provided
+        if (    (args.length == 0 || args[0].length() == 0) ||
+                (args.length == 1 && param_exists)
+            ) {
+            args = new String[] {"1d20"};
         }
 
         // build output string
         // use custom text if exists, else default to generic message
-        String str1 = (input.length > 1) ?
-                String.join(" ", input).substring(1).substring(input[0].length()) + " : " :
-                "Rolling: ";
+        //String str1 = (args.length >= 2 && (!param_exists || args.length >= 3)) ?
+        //        String.join(" ", args).substring(1).substring(args[0].length()) + " : " :
+        //        "Rolling: ";
+        //str1.replace(" -" + mode, "");
 
-        // Preprocess input
+
+        // Preprocess args
         // generates string list in the form of {"1d20", "+", "35"}
-        // iterates through every char in input, generates a split at every operator
+        // iterates through every char in args, generates a split at every operator
         // operators are +-*/^()
         ArrayList<String> dicereader = new ArrayList<>();
         StringBuilder temp_holder = new StringBuilder();
 
-        for (char s : input[0].toCharArray()) {
+        for (char s : args[0].toCharArray()) {
 
             if ("+-*/^()".contains(Character.toString(s))) {
                 if (temp_holder.length() > 0) {
@@ -58,25 +105,27 @@ public class diceparser {
                 String[] dice_parts = param.split("d", 2);
 
                 if (dice_parts[0].equals("") || dice_parts[1].equals("")) {
-                    return new String[] {"Malformed input."};
+                    sender.sendMessage("Malformed input.");
+                    return;
                 }
-                // Catch bad input
+                // Catch bad args
                 try {
                     Integer.parseInt(dice_parts[0]);
                     Integer.parseInt(dice_parts[1]);
 
                 } catch (Exception e) {
-                    return new String[]{"Malformed input."};
+                    sender.sendMessage("Malformed input.");
+                    return;
                 }
 
-                // Finally roll dice now that input is clean
+                // Finally roll dice now that dice parts are clean
                 str1 = str1.concat(param + " (");
                 int dice_num = Integer.parseInt(dice_parts[0]);
                 int dice_val = Integer.parseInt(dice_parts[1]);
 
                 int total = 0;
                 for (int j = 0; j < dice_num; j++) {
-                    int roll = random_generator.nextInt(dice_val) + 1;
+                    int roll = ThreadLocalRandom.current().nextInt(dice_val) + 1;
                     str1 = str1.concat(roll + ", ");
                     total += roll;
                 }
@@ -100,12 +149,34 @@ public class diceparser {
         try {
             total_ = math_eval(String.join("", dicereader));
         } catch (Exception e) {
-            return new String[]{"Math failed... :("};
+            sender.sendMessage("Math failed :/ Error: " + e.getMessage());
+            return;
         }
 
         String str2 = "Total: " + total_;
-
-        return new String[] {str1, str2};
+        // mode 1, aka self
+        if (mode.equals(default_mode_types.get(0))) {
+            sender.sendMessage(str1);
+            sender.sendMessage(str2);
+        // mode 2, aka to everyone
+        } else if (mode.equals(default_mode_types.get(1))) {
+            str1 = sender.getName() + ", " + str1;
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                online.sendMessage(str1);
+                online.sendMessage(str2);
+            }
+            // also send to console, if sender is console
+            if(!(sender instanceof Player)) {
+                sender.sendMessage(str1);
+                sender.sendMessage(str2);
+            }
+        } else {
+            sender.sendMessage("ERROR!");
+            for (String str : default_mode_types) {
+                sender.sendMessage(str);
+            }
+            sender.sendMessage(mode);
+        }
     }
 
 

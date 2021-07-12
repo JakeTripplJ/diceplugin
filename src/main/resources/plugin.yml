@@ -1,11 +1,30 @@
-name: DicePlugin
-version: 0.4
+name: UltimateDicePlugin
+version: 0.5
 author: Highfire1
-main: highfire1.diceplugin.diceplugin.Diceplugin
-website: https://github.com/Highfire1/diceplugin
+main: me.highfire1.diceplugin.Diceplugin
+website: https://www.spigotmc.org/resources/dice-plugin.94015/
 api-version: 1.17
 commands:
+
   roll:
     description: Rolls a dice
     usage: /roll xdx
     aliases: [r]
+    permission: Diceplugin.roll
+    permission-message: You don't have <permission>.
+
+  diceplugin_config:
+    description: use to change configs
+    usage: /Diceplugin_config <config> <new value (optional)>
+    permission: Diceplugin.dungeon_master
+    permission-message: You don't have <permission>.
+
+permissions:
+
+  # if /roll is callable.
+  Diceplugin.roll:
+    default: true
+
+  # players with this permission receive rolls in the dm layer.
+  Diceplugin.dungeon_master:
+    default: op
