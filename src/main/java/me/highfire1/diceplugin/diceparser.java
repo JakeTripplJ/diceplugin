@@ -19,18 +19,11 @@ public class diceparser implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("roll")) {
 
-            String[] dice_output = dice_logic(sender, args);
-
-            // OUTPUTS
-            // [0] - error       - if no error, blank
-            // [1] - mode        - all / self
-            // [2] - total       - 23
-            // [3] - title       - Rolling:
-            // [4] - dice rolls  - 1d20 (2, 4) + 23
+            String[] dice_output = dice_logic(args);
 
                 // mode 0, aka error
             if (dice_output.length == 1) {
-                sender.sendMessage(dice_output[1]);
+                sender.sendMessage(dice_output[0]);
 
                 // mode 1, aka self
             } else if (dice_output[1].equals(default_mode_types.get(0))) {
@@ -71,29 +64,34 @@ public class diceparser implements CommandExecutor {
     // [2] - total       - 23
     // [3] - title       - Rolling:
     // [4] - dice rolls  - 1d20 (2, 4) + 23
-    public String[] dice_logic(CommandSender sender, String[] args) {
+    public static String[] dice_logic(String[] args) {
         // check if a mode was selected
         String mode = default_mode;
-        boolean param_exists = false;
         boolean temp = false;
         String str1 = "";
 
-        int startint;
-        if (args.length > 0 && args[0].contains("d")) {
-            startint = 1;
-        } else {
-            startint = 0;
+        // default to 1d20 if "no" args provided
+        if (args.length == 0 || !args[0].contains("d")) {
+            String[] first =  new String[]{"1d20"};
+
+            // from stackoverflow
+            // adds d20 and args
+            int length = first.length + args.length;
+            String[] new_array = new String[length];
+            System.arraycopy(first, 0, new_array, 0, first.length);
+            System.arraycopy(args, 0, new_array, first.length, args.length);
+
+            args = new_array;
         }
 
         // iterate through args while also building str1
-        for (int i = startint; i < args.length; i++) {
+        for (int i = 1; i < args.length; i++) {
 
             // iterate through all default modes
             for (String default_mode : default_mode_types) {
                 if (args[i].equals(("-" + default_mode))) {
                     mode = default_mode;
                     temp = true;
-                    param_exists = true;
                     break;
                 }
             }
@@ -113,12 +111,7 @@ public class diceparser implements CommandExecutor {
         String title = str1;
         str1 = "";
 
-        // default to 1d20 if "no" args provided
-        if ((args.length == 0 || args[0].length() == 0) ||
-                (args.length == 1 && param_exists)
-        ) {
-            args = new String[]{"1d20"};
-        }
+
 
         // build output string
         // use custom text if exists, else default to generic message

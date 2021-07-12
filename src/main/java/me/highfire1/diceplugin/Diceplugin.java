@@ -1,10 +1,7 @@
 /*
 TODO :
-inline rolls
-permissions and all they entail
-bold on nat 1/20s
 test other versions
-custom events
+custom events/api
 
 make .jar smaller (?)
 
@@ -25,6 +22,8 @@ public final class Diceplugin extends JavaPlugin {
     static Integer max_char_per_dice;
     static Integer max_dice_per_roll;
     static Boolean inline_dice;
+    static String inline_dice_start;
+    static String inline_dice_end;
 
     @Override
     public void onEnable() {
@@ -39,8 +38,14 @@ public final class Diceplugin extends JavaPlugin {
         max_dice_per_roll = this.getConfig().getInt("max_dice_per_roll");
 
         inline_dice = this.getConfig().getBoolean("inline_dice");
+        inline_dice_start = this.getConfig().getString("inline_dice_start");
+        inline_dice_end = this.getConfig().getString("inline_dice_end");
+
+        this.saveConfig();
 
         getCommand("roll").setExecutor(new diceparser());
+        getServer().getPluginManager().registerEvents(new inline_dice_listener(), this);
+
 
     }
 
@@ -70,21 +75,25 @@ public final class Diceplugin extends JavaPlugin {
             // try to access/write value
             String config_value;
             try {
-                config_value = this.getConfig().getString(args[0]);
+                if (this.getConfig().getString(args[0]) == null) {
+                    sender.sendMessage("Config doesn't exist.");
 
-                if(args.length == 2) {
-                    // save to config
-                    this.getConfig().set(args[0], args[1]);
-                    // save to actual config file
-                    this.saveConfig();
-                    // reload in plugin variables
-                    onEnable();
-
-                    sender.sendMessage("[" + this.getName() + "] " + args[0] + " is now " + args[1]);
                 } else {
-                    sender.sendMessage("[" + this.getName() + "] " + args[0] + " is " + config_value);
-                }
+                    config_value = this.getConfig().getString(args[0]);
 
+                    if(args.length == 2) {
+                        // save to config
+                        this.getConfig().set(args[0], args[1]);
+                        // save to actual config file
+                        this.saveConfig();
+                        // reload in plugin variables
+                        onEnable();
+
+                        sender.sendMessage("[" + this.getName() + "] " + args[0] + " is now " + args[1]);
+                    } else {
+                        sender.sendMessage("[" + this.getName() + "] " + args[0] + " is " + config_value);
+                    }
+                }
 
             } catch (Exception e) {
                 sender.sendMessage("Sorry, something went wrong. Error: " + e.getMessage());
