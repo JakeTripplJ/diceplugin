@@ -1,5 +1,5 @@
 max_char_per_dice: 100
-max_dice_per_roll: 1000
+max_dice_per_roll: 10000
 
 defaultmode: all
 

@@ -98,11 +98,7 @@ public class diceparser {
             // if parameter looks like dice then try to roll it
             if (param.contains("d")) {
 
-                dicecount += 1;
-                if (dicecount > max_dice_per_roll) {
-                    sender.sendMessage("Too many dice!");
-                    return;
-                }
+
 
                 // make d20 -> 1d20
                 if (param.charAt(0) == 'd') {
@@ -132,26 +128,28 @@ public class diceparser {
 
                 String tempstring = "";
 
+                // max_dice_per_roll check
+                dicecount += dice_num;
+                if (dicecount > max_dice_per_roll) {
+                    sender.sendMessage("Too many dice!");
+                    return;
+                }
 
                 int total = 0;
                 for (int j = 0; j < dice_num; j++) {
                     int roll = ThreadLocalRandom.current().nextInt(dice_val) + 1;
                     tempstring = tempstring.concat(roll + ", ");
                     total += roll;
-
                 }
-                // remove extra comma from last roll
-                // and cut to max_char_per_dice
 
                 // if string for dice is longer than max_char_per_dice, cut it
-                int cutlength = tempstring.length() > max_char_per_dice ?
-                        max_char_per_dice :
-                        str1.length() - 2;
-                tempstring = tempstring.substring(0, cutlength) + ")";
+                if (tempstring.length() > max_char_per_dice) {
+                    str1 += tempstring.substring(0, max_char_per_dice) + "...)";
+                } else {
+                    str1 += tempstring.substring(0, tempstring.length() - 2) + ")";
+                }
 
-                str1 += tempstring;
-
-                // replace "1d20" with dice output to use in evaluation
+                // replace dice string with dice "integer" to use in evaluation
                 dicereader.set(i, Integer.toString(total));
 
             // if parameter not like dice then just add it to str1
