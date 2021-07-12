@@ -31,7 +31,7 @@ public final class Diceplugin extends JavaPlugin {
         // get configs from file
         this.saveDefaultConfig();
         default_mode = this.getConfig().getString("defaultmode");
-        default_mode_types = new ArrayList<String>();
+        default_mode_types = new ArrayList<>();
         default_mode_types.add(this.getConfig().getString("defaultmode1"));
         default_mode_types.add(this.getConfig().getString("defaultmode2"));
 
@@ -39,6 +39,9 @@ public final class Diceplugin extends JavaPlugin {
         max_dice_per_roll = this.getConfig().getInt("max_dice_per_roll");
 
         inline_dice = this.getConfig().getBoolean("inline_dice");
+
+        getCommand("roll").setExecutor(new diceparser());
+
     }
 
     @Override
@@ -51,11 +54,7 @@ public final class Diceplugin extends JavaPlugin {
                              String label,
                              String[] args) {
 
-        if (command.getName().equalsIgnoreCase("roll")) {
-            diceparser.parsedice(sender, args);
-            return true;
-
-        } else if(command.getName().equalsIgnoreCase("diceplugin_config")) {
+        if(command.getName().equalsIgnoreCase("diceplugin_config")) {
 
 
             // input validation
