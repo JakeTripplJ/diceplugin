@@ -1,16 +1,24 @@
 package me.highfire1.diceplugin;
 
 import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.hover.content.Text;
+
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
+import me.clip.placeholderapi.PlaceholderAPI;
 
 import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
+import java.util.List;
 import static me.highfire1.diceplugin.Diceplugin.*;
 
 public class diceparser implements CommandExecutor {
@@ -20,60 +28,128 @@ public class diceparser implements CommandExecutor {
         if (command.getName().equalsIgnoreCase("roll")) {
 
             String[] dice_output = dice_logic(args);
+            Boolean isDicePool = false;
 
                 // mode 0, aka error
             if (dice_output.length == 1) {
                 sender.sendMessage(dice_output[0]);
 
-                // mode 1, aka self
-            } else if (dice_output[1].equals(default_mode_types.get(0))) {
-                sender.sendMessage(dice_output[3] + dice_output[4]);
-                sender.sendMessage("Total: " + dice_output[2]);
-
-                // mode 2, aka to everyone
-            } else if (dice_output[1].equals(default_mode_types.get(1))) {
-                String sendername = sender.getName();
-                String str1 = sendername + ", " + dice_output[3] + dice_output[4];
-                String str2 = "Total: " + dice_output[2];
-
-                // send to all players
-                for (Player online : Bukkit.getOnlinePlayers()) {
-                    online.sendMessage(str1);
-                    online.sendMessage(str2);
-                }
-
-                // also send to console, if sender is console
-                if (!(sender instanceof Player)) {
-                    sender.sendMessage(str1);
-                    sender.sendMessage(str2);
-                }
             } else {
-                sender.sendMessage("Something has gone catastrophically wrong. Dumping values: ");
-                for (String val : dice_output) {
-                    sender.sendMessage(val);
+                isDicePool = Boolean.parseBoolean(dice_output[5]); // if not error, check if dice pool
+            
+                // mode 1, aka self
+                if (dice_output[1].equals(default_mode_types.get(0))) {
+                        if (isDicePool) {
+                            sender.spigot().sendMessage(buildRollMessage(dice_output, sender, true));
+                        } else {                
+                            sender.sendMessage(dice_output[3] + dice_output[4]);
+                            sender.sendMessage("Total: " + dice_output[2]);
+                    }
+
+                    // mode 2, aka to everyone
+                } else if (dice_output[1].equals(default_mode_types.get(1))) {
+                    String sendername = sender.getName();
+                    String str1 = sendername + ", " + dice_output[3] + dice_output[4];
+                    String str2 = "";
+                    TextComponent hoverResultsToAll = new TextComponent();
+
+                    if (isDicePool) {
+                        str2 = dice_output[2];
+                        hoverResultsToAll = buildRollMessage(dice_output, sender, false);
+
+                    } else {        
+                        str2 = "Total: " + dice_output[2];
+                    }
+
+                    // send to all players
+                    for (Player online : Bukkit.getOnlinePlayers()) {
+                        if (isDicePool) { // send hover text if dice pool
+                            online.spigot().sendMessage(hoverResultsToAll);
+                        } else { // send normal text if not
+                            online.sendMessage(str1);
+                            online.sendMessage(str2);
+                        }
+                    }
+
+                    // also send to console, if sender is console
+                    if (!(sender instanceof Player)) {
+                        if (isDicePool) { // send hover text if dice pool
+                            sender.spigot().sendMessage(hoverResultsToAll);
+                        } else { // send normal text if not
+                            sender.sendMessage(str1);
+                            sender.sendMessage(str2);
+                        }
+                    }
+                } else if ((dice_output[1].equals(default_mode_types.get(2)))) { // mode 2 - in range 
+
+                    if (enable_placeholderapi_for_range) { // check placeholder for range
+                        try {
+                            roll_message_range = Double.parseDouble(PlaceholderAPI.setPlaceholders((Player) sender, roll_message_range_placeholder));
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage("Your range placeholder is not set properly or isn't an integer");
+                            return false;
+                        }
+                    }
+
+                    String sendername = sender.getName();
+                    String str1 = sendername + ", " + dice_output[3] + dice_output[4];
+                    String str2 = "";
+                    TextComponent hoverResultsToAll = new TextComponent();
+
+                    if (isDicePool) { // if pool, send fancy hovertext
+                        str2 = dice_output[2];
+                        hoverResultsToAll = buildRollMessage(dice_output, sender, false);
+                    } else { // if not, normal message
+                        str2 = "Total: " + dice_output[2];
+                    }
+
+                    Player playerRolling = (Player) sender; 
+                    // get nearby players
+                    List<Entity> nearbyEntities = playerRolling.getNearbyEntities(roll_message_range, roll_message_range, roll_message_range);
+                    nearbyEntities.add((Entity) playerRolling); // include sender
+
+                    for (Entity nearbyEntity : nearbyEntities) { // send to all nearby players
+                        if (nearbyEntity.getType().equals(EntityType.PLAYER)) { 
+                            if (isDicePool) { // send hover text if dice pool
+                                nearbyEntity.spigot().sendMessage(hoverResultsToAll);
+                            } else { // send normal text if not
+                                nearbyEntity.sendMessage(str1);
+                                nearbyEntity.sendMessage(str2);
+                            }
+                        }
+                    }
+
+                } else {
+                    sender.sendMessage("Something has gone catastrophically wrong. Dumping values: ");
+                    for (String val : dice_output) {
+                        sender.sendMessage(val);
+                    }
                 }
             }
-
         }
         return true;
     }
     // TODO convert to hashmap + exceptions at some point
     // OUTPUTS
     // [0] - error       - if no error, blank
-    // [1] - mode        - all / self
+    // [1] - mode        - all / self / range
     // [2] - total       - 23
     // [3] - title       - Rolling:
     // [4] - dice rolls  - 1d20 (2, 4) + 23
+    // [5] - dice pool   - true if a pool, false otherwise 
+
     public static String[] dice_logic(String[] args) {
         // check if a mode was selected
         String mode = default_mode;
-        boolean temp = false;
+        boolean dontAddArgToString = false;
         String str1 = "";
+        boolean isDicePool = false;
+        String poolResults = "";
 
         // default to 1d20 if "no" args provided
-        if (args.length == 0 || !args[0].contains("d")) {
-            String[] first =  new String[]{"1d20"};
-
+        if (args.length == 0 || !args[0].contains("d")) { // default roll behavior
+            String[] first =  new String[]{default_roll};
+            
             // from stackoverflow
             // adds d20 and args
             int length = first.length + args.length;
@@ -87,19 +163,26 @@ public class diceparser implements CommandExecutor {
         // iterate through args while also building str1
         for (int i = 1; i < args.length; i++) {
 
+            // if the argument doesn't start with a hyphen or match dice rules, throw an error
+            if (!args[i].matches("^d[0-9]+|^[0-9]+d[0-9]+|^-.+")) {
+                // dontAddArgToString = true;
+                // break;
+                return new String[]{"Malformed input."};
+            } 
+
             // iterate through all default modes
             for (String default_mode : default_mode_types) {
                 if (args[i].equals(("-" + default_mode))) {
                     mode = default_mode;
-                    temp = true;
+                    dontAddArgToString = true;
                     break;
                 }
             }
             // build to str1 if not parameter
-            if (!temp) {
+            if (!dontAddArgToString) {
                 str1 += args[i] + " ";
             }
-            temp = false; // replacement for if/else
+            dontAddArgToString = false; // replacement for if/else
         }
 
         if (str1.length() > 0) {
@@ -111,15 +194,12 @@ public class diceparser implements CommandExecutor {
         String title = str1;
         str1 = "";
 
-
-
         // build output string
         // use custom text if exists, else default to generic message
         //String str1 = (args.length >= 2 && (!param_exists || args.length >= 3)) ?
         //        String.join(" ", args).substring(1).substring(args[0].length()) + " : " :
         //        "Rolling: ";
         //str1.replace(" -" + mode, "");
-
 
         // Preprocess args
         // generates string list in the form of {"1d20", "+", "35"}
@@ -129,6 +209,11 @@ public class diceparser implements CommandExecutor {
         StringBuilder temp_holder = new StringBuilder();
 
         for (char s : args[0].toCharArray()) {
+
+            // check for pool
+            if (Character.toString(s).equals("@")) { // if the message has an @ then assume it's a pool
+                isDicePool = true;
+            }
 
             if ("+-*/^()".contains(Character.toString(s))) {
                 if (temp_holder.length() > 0) {
@@ -158,8 +243,31 @@ public class diceparser implements CommandExecutor {
                     param = "1".concat(param);
                 }
 
-                String[] dice_parts = param.split("d", 2);
+                String[] dice_parts;
+                if (isDicePool) {
+                    dice_parts = param.split("d|@", 3);
+                } else {
+                    dice_parts = param.split("d", 2);
+                    if (convert_regular_rolls_to_pools) { // convert to pool if config setting is enabled
 
+                        try {
+                            Integer.parseInt(dice_parts[1]);
+                        } catch (Exception e) {
+                            return new String[]{"Malformed input."};
+                        }
+
+                        Integer pool_value = (Integer.parseInt(dice_parts[1]) / 2) + 1; // (n/2)+1 logic
+
+                        String[] temp_dice_parts = new String[dice_parts.length + 1];
+                        System.arraycopy(dice_parts, 0, temp_dice_parts, 0, dice_parts.length); // copy array to new array with one more slot
+                        temp_dice_parts[2] = pool_value.toString(); // fill new slot with pool value
+                        dice_parts = temp_dice_parts;
+                        param += "@" + pool_value; // append pool designator 
+                        
+                        isDicePool = true; // it is now a pool, treat it as such
+                    }
+                }
+                
                 if (dice_parts[0].equals("") || dice_parts[1].equals("")) {
                     return new String[]{"Malformed input."};
                 }
@@ -167,6 +275,7 @@ public class diceparser implements CommandExecutor {
                 try {
                     Integer.parseInt(dice_parts[0]);
                     Integer.parseInt(dice_parts[1]);
+                    if (isDicePool) Integer.parseInt(dice_parts[2]);
 
                 } catch (Exception e) {
                     return new String[]{"Malformed input."};
@@ -176,6 +285,8 @@ public class diceparser implements CommandExecutor {
                 str1 = str1.concat(param + " (");
                 int dice_num = Integer.parseInt(dice_parts[0]);
                 int dice_val = Integer.parseInt(dice_parts[1]);
+                int pool_criteria = 0;
+                if (isDicePool) pool_criteria = Integer.parseInt(dice_parts[2]); // number for pool value to be equal or greater to
 
                 String tempstring = "";
 
@@ -186,26 +297,51 @@ public class diceparser implements CommandExecutor {
                 }
 
                 int total = 0;
+                int poolSuccesses = 0;
+
                 for (int j = 0; j < dice_num; j++) {
                     int roll = ThreadLocalRandom.current().nextInt(dice_val) + 1;
+
+                    String colorModifiers = "";
+
+                    if (isDicePool) {
+                        if (roll >= pool_criteria) {
+                            poolSuccesses += 1;
+                            colorModifiers += ChatColor.GREEN; // green on pool success
+                        } else {
+                            colorModifiers += ChatColor.RED; // red on pool failure
+                        }
+                    }
+
                     if (roll == dice_val || roll == 1) {
-                        tempstring = tempstring.concat(ChatColor.BOLD + Integer.toString(roll) + ChatColor.RESET + ", ");
+                        colorModifiers += ChatColor.BOLD; // embolden rolls of 1 and perfect rolls 
+                    }
+
+                    if (colorModifiers != "") {
+                        tempstring = tempstring.concat(colorModifiers + Integer.toString(roll) + ChatColor.RESET + ", ");
                     } else {
                         tempstring = tempstring.concat(roll + ", ");
                     }
                     total += roll;
                 }
+
+                // pool results get their own variable due to complexity
+                if (isDicePool) { 
+                    poolResults = ChatColor.GREEN + Integer.toString(poolSuccesses)            + ChatColor.RESET + " successes, " 
+                                + ChatColor.RED   + Integer.toString(dice_num - poolSuccesses) + ChatColor.RESET + " failures";
+                } 
+
                 // if string for dice is longer than max_char_per_dice, cut it
-                if (tempstring.length() > max_char_per_dice) {
+                if ((max_char_per_dice != 0) && (tempstring.length() > max_char_per_dice)) {
                     str1 += tempstring.substring(0, max_char_per_dice) + "...)";
                 } else {
                     str1 += tempstring.substring(0, tempstring.length() - 2) + ")";
                 }
-
+                
                 // replace dice string with dice "integer" to use in evaluation
                 dicereader.set(i, Integer.toString(total));
 
-                // if parameter not like dice then just add it to str1
+            // if parameter not like dice then just add it to str1
             } else if (param.contains("(") || param.contains(")")) {
                 str1 = str1.concat(param);
 
@@ -214,26 +350,39 @@ public class diceparser implements CommandExecutor {
             }
         }
 
+        String[] listOfRolls = str1.split(" "); // create arraylist of rolls
+        
+        if ((max_results_length != 0) && ((listOfRolls.length - 1) > max_results_length)) { // subtract 1 because the type of roll is included in this list
+            String[] trimmedListOfRolls = new String[max_results_length + 1];
+            System.arraycopy(listOfRolls, 0, trimmedListOfRolls, 0, max_results_length + 1);
+            str1 = String.join(" ", trimmedListOfRolls);
+            str1 += " ... )";
+        }
+        
         // evaluate the expression to output a total, taking into account parentheses/math
-        String total_;
-        try {
-            total_ = Integer.toString(math_eval(String.join("", dicereader)));
-        } catch (Exception e) {
-            return new String[]{"Math failed :/ Error: " + e.getMessage()};
+        String total_ = "";
+        if (!isDicePool){ // only check math for non pools 
+            try {
+                total_ = Integer.toString(math_eval(String.join("", dicereader)));
+            } catch (Exception e) {
+                return new String[]{"Math failed :/ Error: " + e.getMessage()};
+            }
         }
 
         // duplicate comment for convenience
         // [0] - error       - if no error, blank
-        // [1] - mode        - all / self
-        // [2] - total       - 23
+        // [1] - mode        - all / self / range
+        // [2] - total       - 23 (If dice pool, is replaced with a string showing results)
         // [3] - title       - Rolling:
         // [4] - dice rolls  - 1d20 (2, 4) + 23
+        // [5] - dice pool   - true if a pool, false otherwise 
 
-        return new String[]{"", mode, total_, title, str1};
+        if (isDicePool) {
+            return new String[]{"", mode, poolResults, title, str1, Boolean.toString(isDicePool)};
+        } else {
+            return new String[]{"", mode, total_, title, str1, Boolean.toString(isDicePool)};
+        }
     }
-
-
-
 
     // Courtesy of Boann from Stackoverflow @
     // https://stackoverflow.com/questions/3422673/how-to-evaluate-a-math-expression-given-in-string-form
@@ -315,5 +464,49 @@ public class diceparser implements CommandExecutor {
                 return x;
             }
         }.parse();
+    }
+
+    public static TextComponent buildRollMessage( String[] dice_output, CommandSender sender, Boolean isSelfRoll) {
+        TextComponent hoverResults = new TextComponent();
+        String sendername = sender.getName(); 
+
+        String rollTypeString = dice_output[4].split(" ")[0]; // type of roll (e.g. 20d20)
+
+        if (!include_pool_text_in_roll) {
+            rollTypeString = rollTypeString.split("@")[0];
+        }
+
+        if (isSelfRoll) { // if self roll, sub name for "You"
+            sendername = "You";
+        } else if (enable_placeholderapi_for_player_names) { // if using name placeholders, replace sendername with it
+            try {
+                sendername = PlaceholderAPI.setPlaceholders((Player) sender, player_name_placeholder);
+            } catch (Exception e) {
+                sender.sendMessage("Your player name placeholder is not set properly");
+            }
+        }
+
+        if (message_style.equals("default")) { // vanilla style text
+            hoverResults = new TextComponent(sendername + " rolled " + ChatColor.BOLD + rollTypeString + ChatColor.RESET + ": " + dice_output[2]); // chat message akin to "2 successes, 2 failures"
+            hoverResults.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(dice_output[4]))); // hover text akin to (1, 2, 3, 4)
+
+        } else if (message_style.equals("special")) { // gray text
+
+            String prefaceText = "[" + ChatColor.DARK_AQUA + "Rolls" + ChatColor.RESET + "] ";
+
+            String diceOutputString = dice_output[2]; 
+            diceOutputString = diceOutputString.replace(ChatColor.RESET.toString(), ChatColor.GRAY.toString()); // replace white text with gray text 
+
+            hoverResults = new TextComponent(prefaceText + 
+                                                ChatColor.GOLD + sendername + 
+                                                ChatColor.GRAY + " rolled a " + 
+                                                ChatColor.GOLD + rollTypeString + 
+                                                ChatColor.GRAY + ": " + 
+                                                diceOutputString + "."); // chat message akin to "2 successes, 2 failures"
+
+            hoverResults.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(dice_output[4]))); // hover text akin to (1, 2, 3, 4)
+        }
+
+        return hoverResults;
     }
 }

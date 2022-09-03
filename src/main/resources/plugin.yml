@@ -1,14 +1,17 @@
 name: UltimateDicePlugin
-version: 0.5
-author: Highfire1
+version: 1.0
+author: Highfire1 + JakeTripplJ
 main: me.highfire1.diceplugin.Diceplugin
 website: https://www.spigotmc.org/resources/dice-plugin.94015/
-api-version: 1.17
+api-version: 1.19
+
+softdepend: [PlaceholderAPI] 
+
 commands:
 
   roll:
     description: Rolls a dice
-    usage: /roll xdx
+    usage: /roll xdx(@x)
     aliases: [r]
     permission: Diceplugin.roll
     permission-message: You don't have <permission>.

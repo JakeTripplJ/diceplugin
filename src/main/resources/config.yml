@@ -1,11 +1,43 @@
-max_char_per_dice: 100
+max_char_per_dice: 0
 max_dice_per_roll: 1000
+
+# maximum amount of rolls to show in hover text before cutting it off (0 for unlimited)
+max_results_length: 20
 
 defaultmode: all
 
 defaultmode1: self
 defaultmode2: all
+defaultmode3: range
 
-inline_dice: true
+# range of the roll messages (in blocks)
+# only matters if using range mode
+roll_message_range: 50
+
+# if enabled, will use a placeholder for the range and ignore the set value
+enable_placeholderapi_for_range: true
+roll_message_range_placeholder: '%venturechat_channel_distance%'
+
+# if enabled, will use a placeholder for players' names
+enable_placeholderapi_for_player_names: true
+player_name_placeholder: '%orpdesc_name%'
+
+inline_dice: false
 inline_dice_start: '[['
 inline_dice_end: ']]'
+
+# style of the message sent upon roll
+# default - vanilla style, white text
+# special - stylized gray text
+message_style: special
+
+# the roll to use when only "/roll" is called (default is 1d20)
+default_roll: 1d6@4
+
+# if true, converts all plain rolls to pools of the format dX@(X/2)+1
+convert_regular_rolls_to_pools: true
+
+# determines if the pool type should be included in the roll text
+# true:  "X rolled d20@11"
+# false: "X rolled d20"
+include_pool_text_in_roll: false
