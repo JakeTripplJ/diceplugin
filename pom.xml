@@ -6,7 +6,7 @@
 
     <groupId>highfire1.diceplugin</groupId>
     <artifactId>diceplugin</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
     <packaging>jar</packaging>
 
     <name>Diceplugin</name>

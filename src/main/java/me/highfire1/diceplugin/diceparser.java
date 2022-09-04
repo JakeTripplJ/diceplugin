@@ -48,45 +48,25 @@ public class diceparser implements CommandExecutor {
 
                     // mode 2, aka to everyone
                 } else if (dice_output[1].equals(default_mode_types.get(1))) {
-                    String sendername = sender.getName();
-                    String str1 = sendername + ", " + dice_output[3] + dice_output[4];
-                    String str2 = "";
-                    TextComponent hoverResultsToAll = new TextComponent();
 
-                    if (isDicePool) {
-                        str2 = dice_output[2];
-                        hoverResultsToAll = buildRollMessage(dice_output, sender, false);
+                    sendToAll(sender, dice_output, isDicePool); // made into a function due to repetition of logic
 
-                    } else {        
-                        str2 = "Total: " + dice_output[2];
-                    }
-
-                    // send to all players
-                    for (Player online : Bukkit.getOnlinePlayers()) {
-                        if (isDicePool) { // send hover text if dice pool
-                            online.spigot().sendMessage(hoverResultsToAll);
-                        } else { // send normal text if not
-                            online.sendMessage(str1);
-                            online.sendMessage(str2);
-                        }
-                    }
-
-                    // also send to console, if sender is console
-                    if (!(sender instanceof Player)) {
-                        if (isDicePool) { // send hover text if dice pool
-                            sender.spigot().sendMessage(hoverResultsToAll);
-                        } else { // send normal text if not
-                            sender.sendMessage(str1);
-                            sender.sendMessage(str2);
-                        }
-                    }
                 } else if ((dice_output[1].equals(default_mode_types.get(2)))) { // mode 2 - in range 
 
                     if (enable_placeholderapi_for_range) { // check placeholder for range
                         try {
-                            roll_message_range = Double.parseDouble(PlaceholderAPI.setPlaceholders((Player) sender, roll_message_range_placeholder));
+
+                            String placeHolderString = PlaceholderAPI.setPlaceholders((Player) sender, roll_message_range_placeholder);
+
+                            if (placeHolderString.equalsIgnoreCase("none")) { // if range placeholder is "none" then send roll to all instead
+                                sendToAll(sender, dice_output, isDicePool);
+                                return true;
+                            } else { // if it's not "none" then treat it as a double
+                                roll_message_range = Double.parseDouble(placeHolderString);
+                            }
+
                         } catch (NumberFormatException e) {
-                            sender.sendMessage("Your range placeholder is not set properly or isn't an integer");
+                            sender.sendMessage("Your range placeholder is not set up properly");
                             return false;
                         }
                     }
@@ -509,4 +489,40 @@ public class diceparser implements CommandExecutor {
 
         return hoverResults;
     }
+
+    public static void sendToAll(CommandSender sender, String[] dice_output, Boolean isDicePool) {
+        String sendername = sender.getName();
+        String str1 = sendername + ", " + dice_output[3] + dice_output[4];
+        String str2 = "";
+        TextComponent hoverResultsToAll = new TextComponent();
+
+        if (isDicePool) {
+            str2 = dice_output[2];
+            hoverResultsToAll = buildRollMessage(dice_output, sender, false);
+
+        } else {        
+            str2 = "Total: " + dice_output[2];
+        }
+
+        // send to all players
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (isDicePool) { // send hover text if dice pool
+                online.spigot().sendMessage(hoverResultsToAll);
+            } else { // send normal text if not
+                online.sendMessage(str1);
+                online.sendMessage(str2);
+            }
+        }
+
+        // also send to console, if sender is console
+        if (!(sender instanceof Player)) {
+            if (isDicePool) { // send hover text if dice pool
+                sender.spigot().sendMessage(hoverResultsToAll);
+            } else { // send normal text if not
+                sender.sendMessage(str1);
+                sender.sendMessage(str2);
+            }
+        }
+    }
+
 }
